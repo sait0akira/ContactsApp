@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:yourapp="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/new_contact"
+        android:icon="@drawable/baseline_add_24"
+        android:onClick="OnClick"
+        android:title="add new contact"
+        yourapp:showAsAction="always|collapseActionView" />
+    <item
+        android:id="@+id/UploadCSV"
+        android:onClick="OnClick"
+        android:title="CSV"
+        yourapp:showAsAction="always|collapseActionView" />
+
+</menu>
