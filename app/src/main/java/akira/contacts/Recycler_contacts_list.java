@@ -8,23 +8,21 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.Toast;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import io.realm.Realm;
 
-public class contact_list extends Fragment {
+public class Recycler_contacts_list extends Fragment {
 
     @BindView(R.id.recView)
     RecyclerView rcv;
-     Realm realm;
+    Realm realm;
 
     @Override
     public void onCreate(final Bundle saveInstanceState) {
         super.onCreate(saveInstanceState);
-        realm = Realm.getInstance(getContext());
+        Realm.init(getContext());
+        realm = Realm.getDefaultInstance();
     }
 
     @Nullable
@@ -39,7 +37,7 @@ public class contact_list extends Fragment {
     public void onViewCreated(final View view, @Nullable final Bundle saveInstanceState) {
         super.onViewCreated(view, saveInstanceState);
         rcv.setLayoutManager(new LinearLayoutManager(getContext()));
-        rcv.setAdapter(new contact_adapter(realm.allObjects(contact_shelf.class)));
+        rcv.setAdapter(new Realm_contacts_adapter(realm.where(Realm_contact.class).findAllAsync()));
     }
 
     @Override

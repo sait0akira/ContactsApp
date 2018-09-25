@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
 import io.realm.Realm;
-import io.realm.RealmResults;
 
 public class MainActivity extends AppCompatActivity {
     private Toolbar toolbar;
@@ -46,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
 
         setSupportActionBar(toolbar);
 
+        Realm.init(getApplicationContext());
+
 
         class ContactLoader extends AsyncTask<Void, Void, Void> {
 
@@ -57,33 +59,37 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
+
             protected Cursor getContactsBirthday() {
-                Uri uri = Data.CONTENT_URI;
+                Uri uri = ContactsContract.Data.CONTENT_URI;
 
                 String[] projection = new String[]{
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.Contacts.DISPLAY_NAME,
                         ContactsContract.CommonDataKinds.Event.CONTACT_ID,
                         ContactsContract.CommonDataKinds.Event.START_DATE
                 };
 
                 String where =
-                        Data.MIMETYPE + "= ? AND " +
+                        ContactsContract.Data.MIMETYPE + "= ? AND " +
                                 ContactsContract.CommonDataKinds.Event.TYPE + "=" +
                                 ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY;
                 String[] selectionArgs = new String[]{
                         ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE
                 };
                 String sortOrder = null;
+
                 return managedQuery(uri, projection, where, selectionArgs, sortOrder);
             }
+
 
             protected Cursor getGender() {
                 Uri uri = Data.CONTENT_URI;
 
                 String[] projection = new String[]{
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.Contacts.DISPLAY_NAME,
                         ContactsContract.CommonDataKinds.Phone._ID,
                         ContactsContract.CommonDataKinds.Note.NOTE
+
                 };
 
                 String where = null;
@@ -93,65 +99,91 @@ public class MainActivity extends AppCompatActivity {
                 return managedQuery(uri, projection, where, selectionArgs, sortOrder);
             }
 
+            protected Cursor getAll() {
+                Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+                return managedQuery(uri, null, null, null, null);
+            }
+
 
             @Override
             protected Void doInBackground(Void... voids) {
-                cursor1 = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, null);
+
+                final Cursor cursor1 = getAll();
+                final Cursor getGender = getGender();
+                final Cursor getBDATE = getContactsBirthday();
+                getBDATE.moveToFirst();
+                cursor1.moveToFirst();
+                do {
+                    realm = Realm.getDefaultInstance();
+                    realm.executeTransaction(new Realm.Transaction() {
+
+                        Realm_contact contact;
+
+                        @Override
+                        public void execute(Realm realm) {
+
+                            String contactNumber = cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
 
 
-                Cursor cursor = getContactsBirthday();
-                Cursor cursor2 = getGender();
+                            contactNumber = phoneNumCorrector(contactNumber);
+                            contactNumber = new MyFunctions().phoneNumCorrector(contactNumber);
+                            try {
+
+                                contact = realm.createObject(Realm_contact.class, contactNumber);
 
 
-                while (cursor1.moveToNext()) {
-
-                    realm = Realm.getInstance(context);
-                    realm.beginTransaction();
-                    contact_shelf contact;
-                    contact = realm.createObject(contact_shelf.class);
-
-                    RealmResults<contact_shelf> toDel;
-                    
+                                contact.setName(cursor1.getString(cursor1.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)));
 
 
-                    if (cursor2.moveToFirst()) {
-                        do {
-                            if ((cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)).equals(cursor2.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))))
-                                    && (cursor2.getString(cursor2.getColumnIndex(ContactsContract.CommonDataKinds.Note.NOTE)).toLowerCase().contains("male")))
-                                contact.setGender(cursor2.getString(cursor2.getColumnIndex(ContactsContract.CommonDataKinds.Note.NOTE)));
+                                //  Вбивание имени и фамилии в базу
+                                String[] ns;
+                                String altName = cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_ALTERNATIVE));
+                                ns = altName.split(",");
+                                if (altName.contains("+")) {
+                                } else {
+                                    if (altName.contains(",")) {
+                                        contact.setName(ns[1].trim());
+                                        contact.setSurname(ns[0].trim());
+                                    } else contact.setName(ns[0].trim());
 
-                        } while (cursor2.moveToNext());
+                                }
 
-                    }
-
-
-                    if (cursor.moveToFirst()) {
-                        do {
-                            if (cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)).equals(cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))))
-                                contact.setBdate(cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Event.START_DATE)));
-                        } while (cursor.moveToNext());
-                    }// cursor.close();
-                    String[] ns;
-                    String altName = cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_ALTERNATIVE));
-                    ns = altName.split(",");
-                    if (altName.contains("+")) {
-                    } else {
-                        if (altName.contains(",")) {
-                            contact.setName(ns[1].trim());
-                            contact.setSurname(ns[0].trim());
-                        } else contact.setName(ns[0].trim());
-
-                    }
-                    toDel = realm.where(contact_shelf.class).equalTo("phoneNum", cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME))).findAll();
-                    int sizee = toDel.size();
-                    for (int i = sizee - 1; i > -1; i--)
-                        toDel.get(i).removeFromRealm();
-                    contact.setPhoneNum(cursor1.getString(cursor1.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME)));
+//                                Вбивание даты рождения
 
 
-                    realm.commitTransaction();
-                }
-                // cursor1.
+                                getBDATE.moveToFirst();
+                                do {
+                                    if (getBDATE.getString(0).equals(cursor1.getString(cursor1.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)))) {
+
+                                        String[] temp_date = getBDATE.getString(2).split("-");
+                                        contact.setBdate(new Date(Integer.parseInt(temp_date[0]), Integer.parseInt(temp_date[1]), Integer.parseInt(temp_date[2])));
+
+                                    }
+
+                                } while (getBDATE.moveToNext());
+
+                                // Вбивание пола в базу
+
+                                getGender.moveToFirst();
+                                do {
+                                    if (getGender.getString(0).equals(cursor1.getString(cursor1.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)))) {
+                                        if ((getGender.getString(2) != null) && (getGender.getString(2).toLowerCase().contains("male")))
+                                            contact.setGender(getGender.getString(2));
+
+
+                                    }
+                                } while (getGender.moveToNext());
+
+
+                            } catch (Exception ie) {
+                                if (ie.getMessage().toLowerCase().contains("primary key")) {
+                                }
+                            }
+                        }
+                    });
+
+
+                } while (cursor1.moveToNext());
 
                 return null;
             }
@@ -165,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
             getSupportFragmentManager()
                     .beginTransaction()
 
-                    .add(R.id.viewFrame, new contact_list())
+                    .add(R.id.viewFrame, new Recycler_contacts_list())
                     .commit();
 
         }
@@ -176,23 +208,22 @@ public class MainActivity extends AppCompatActivity {
         protected Void doInBackground(Void... voids) {
 
             try {
-                // String UplURL = "https://docs.google.com/spreadsheets/d/1hKb4Zvxh6he6M2ZCc0cHg7bqohrcXgf7Ggb-q9s8_2c/edit?usp=sharing";
-                String UplURL = "http://samplecsvs.s3.amazonaws.com/SalesJan2009.csv";
+
+                String UplURL = "http://samplecsvs.s3.amazonaws.com/SalesJan2009.csv"; //download URL
                 URL url = new URL(UplURL);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.connect();
-                File apkStorage = new File(Environment.getExternalStorageDirectory() + "/csvContactsTest/");
+                File apkStorage = new File(Environment.getExternalStorageDirectory() + "/csvContactsTest/"); //download folder
                 if (!apkStorage.exists()) {
                     apkStorage.mkdir();
                 }
-                String downlFileName = "SalesJan2009.csv";
+                String downlFileName = "SalesJan2009.csv"; //downloaded file`s name
 
                 File OutFile = new File(apkStorage, downlFileName);
-                // if (!OutFile.exists()) {
-                OutFile.createNewFile();
-                // }
-
+                if (!OutFile.exists()) {
+                    OutFile.createNewFile();
+                }
                 FileOutputStream fos = new FileOutputStream(OutFile);
                 InputStream is = connection.getInputStream();
 
@@ -203,10 +234,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 fos.close();
                 is.close();
-
-
                 InputStream Fis = new FileInputStream(OutFile);
                 CSVconvert csvCon = new CSVconvert(Fis);
+
                 csvCon.addToBase(getBaseContext());
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -215,6 +245,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public String phoneNumCorrector(String phn) {
+        char[] temp_number = null;
+        temp_number = phn.toCharArray();
+        if ((temp_number[0] == '+') && (temp_number[1] == '7')) {
+            temp_number[0] = '-';
+            temp_number[1] = '8';
+        }
+        for (int i = 0; i < temp_number.length - 1; i++) {
+            if ((temp_number[i] == ' ') || (temp_number[i] == '(') || (temp_number[i] == ')'))
+                temp_number[i] = '-';
+
+
+        }
+        String finalNum = "";
+        for (int i = 0; i < temp_number.length; i++) {
+            if (temp_number[i] != '-') finalNum += String.valueOf(temp_number[i]);
+        }
+        return finalNum;
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -226,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean OnClick(MenuItem menuItem) {
         if (menuItem.getItemId() == R.id.new_contact) {
-            Intent intent = new Intent(MainActivity.this, add_contact.class);
+            Intent intent = new Intent(MainActivity.this, New_contact.class);
             startActivity(intent);
 
         }
@@ -243,6 +292,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void onBackPressed() {
         //  super.onBackPressed();
+
         openQuitDialog();
     }
 

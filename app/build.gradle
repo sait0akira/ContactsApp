@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'realm-android'
 
 android {
     compileSdkVersion 26
@@ -18,6 +19,9 @@ android {
         }
     }
 }
+realm{
+    syncEnabled = true;
+}
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -28,8 +32,13 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'com.jakewharton:butterknife:8.8.1'
     annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
-    implementation 'io.realm:realm-android:0.87.4'
-    annotationProcessor 'io.realm:realm-android:0.87.4'
+   // implementation 'io.realm:realm-android:0.87.4'
+ //   annotationProcessor 'io.realm:realm-android:0.87.4'
+    //Realm
+    compile 'io.realm:android-adapters:2.1.1'
+ //   implementation "io.realm:realm-annotations-processor:${rootProject.ext.realm}"
+    //Realm adapter Recycler view
+  //  implementation "io.realm:android-adapters:${rootProject.ext.realmAdapter}"
     implementation 'com.android.support:recyclerview-v7:26.1.0'
     implementation 'com.android.support:cardview-v7:26.1.0'
 
