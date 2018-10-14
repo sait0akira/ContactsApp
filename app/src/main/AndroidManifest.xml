@@ -20,7 +20,7 @@
             </intent-filter>
 
         </activity>
-        <activity android:name=".New_contact">
+        <activity android:name=".NewContact">
 
         </activity>
     </application>

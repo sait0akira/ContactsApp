@@ -2,7 +2,6 @@ package akira.contacts;
 
 
 import android.app.DatePickerDialog;
-import android.os.AsyncTask;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -12,15 +11,17 @@ import android.view.ViewGroup;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.realm.Realm;
 import io.realm.RealmResults;
+
 import java.util.Calendar;
 import java.util.Date;
 
-public class New_contact_fragment extends Fragment {
+public class NewContactFragment extends Fragment {
 
     @BindView(R.id.nameAdd)
     EditText add_name;
@@ -58,45 +59,6 @@ public class New_contact_fragment extends Fragment {
     }
 
 
-    class AsyncDataLoad extends AsyncTask<Void, Void, Void> {
-        private boolean isCreated = true;
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            realm = Realm.getDefaultInstance();
-            realm.executeTransaction(new Realm.Transaction() {
-                @Override
-                public void execute(Realm realm) {
-                    try {
-                        Realm_contact contact = realm.createObject(Realm_contact.class, new MyFunctions().phoneNumCorrector(add_phonenum.getText().toString()));
-                        isCreated = true;
-                        contact.setName(getTrimmedName());
-                        contact.setSurname(getTrimmedSurname());
-
-                        contact.setBdate(new Date(temp_data.getYear(), temp_data.getMonth(), temp_data.getDate()));
-
-                        contact.setGender(getTrimmedGender());
-
-                    } catch (Exception ie) {
-                        if (ie.getMessage().toLowerCase().contains("primary key"))
-                            isCreated = false;
-                    }
-                }
-            });
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-            if (isCreated) {
-                Toast.makeText(getContext(), "Contact was created.", Toast.LENGTH_SHORT).show();
-                getActivity().finish();
-            } else
-                Toast.makeText(getContext(), "Contact already exist.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     Calendar myCalendar = Calendar.getInstance();
     DatePickerDialog.OnDateSetListener BDATE = new DatePickerDialog.OnDateSetListener() {
 
@@ -124,7 +86,9 @@ public class New_contact_fragment extends Fragment {
     public void onAddClick() {
 
         if (add_phonenum.getText().toString().length() != 0) {
-            new AsyncDataLoad().execute();
+
+            new AsyncManualContactUpload(getContext(), getActivity(), getTrimmedName(), getTrimmedSurname(), add_phonenum.getText().toString(), temp_data, getTrimmedGender()).execute();
+
         } else {
             Toast.makeText(getContext(), "Please enter phone number.", Toast.LENGTH_SHORT).show();
         }
@@ -135,10 +99,10 @@ public class New_contact_fragment extends Fragment {
     @OnClick(R.id.button_remove)
     public void onDelClick() {
         realm = Realm.getDefaultInstance();
-        realm.executeTransaction(new Realm.Transaction() {
+        realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
-                RealmResults<Realm_contact> toDel = realm.where(Realm_contact.class).findAll();
+                RealmResults<RealmContact> toDel = realm.where(RealmContact.class).findAll();
                 toDel.deleteAllFromRealm();
             }
         });

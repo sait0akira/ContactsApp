@@ -1,6 +1,7 @@
 package akira.contacts;
 
 
+import android.support.annotation.Nullable;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -11,28 +12,19 @@ import android.widget.TextView;
 
 import io.realm.OrderedRealmCollection;
 import io.realm.Realm;
-import io.realm.RealmChangeListener;
 import io.realm.RealmRecyclerViewAdapter;
-import io.realm.RealmResults;
-import io.realm.Sort;
 
-public class Realm_contacts_adapter extends RealmRecyclerViewAdapter<Realm_contact, Realm_contacts_adapter.ViewHolder> {
+public class RealmContactsAdapter extends RealmRecyclerViewAdapter<RealmContact, RealmContactsAdapter.ViewHolder> {
 
-    private final RealmResults<Realm_contact> MyCont;
+
     Realm realm;
 
 
-    public Realm_contacts_adapter(OrderedRealmCollection<Realm_contact> Cont) {
+    RealmContactsAdapter(OrderedRealmCollection<RealmContact> Cont, boolean autoUpdate) {
         super(Cont, true);
-        MyCont = Cont.where().findAll().sort("name", Sort.ASCENDING, "surname", Sort.ASCENDING);
         realm = Realm.getDefaultInstance();
 
-        MyCont.addChangeListener(new RealmChangeListener<RealmResults<Realm_contact>>() {
-            @Override
-            public void onChange(RealmResults<Realm_contact> contact_shelves) {
-                notifyDataSetChanged();
-            }
-        });
+
     }
 
     @Override
@@ -41,21 +33,27 @@ public class Realm_contacts_adapter extends RealmRecyclerViewAdapter<Realm_conta
         return new ViewHolder((CardView) view);
     }
 
+    @Nullable
+    @Override
+    public OrderedRealmCollection<RealmContact> getData() {
+
+        return super.getData();
+    }
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, final int position) {
 
-        Realm_contact realmContact = getItem(position);
+        RealmContact realmContact = getItem(position);
         if (realmContact != null) holder.bind(realmContact);
 
         holder.delc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                holder.delc.setClickable(false);
                 realm.executeTransaction(new Realm.Transaction() {
                     @Override
                     public void execute(Realm realm) {
-                        MyCont.get(holder.getAdapterPosition()).deleteFromRealm();
+                        getData().get(holder.getAdapterPosition()).deleteFromRealm();
                     }
                 });
             }
@@ -66,7 +64,11 @@ public class Realm_contacts_adapter extends RealmRecyclerViewAdapter<Realm_conta
 
     @Override
     public int getItemCount() {
-        return MyCont.size();
+        try {
+            return getData().size();
+        } catch (NullPointerException ie) {
+            return 0;
+        }
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -93,18 +95,17 @@ public class Realm_contacts_adapter extends RealmRecyclerViewAdapter<Realm_conta
 
         }
 
-        public void bind(Realm_contact realmContact) {
-            con_name.setText(MyCont.get(getAdapterPosition()).getName());
-            con_surname.setText(MyCont.get(getAdapterPosition()).getSurname());
-            con_phonenum.setText(MyCont.get(getAdapterPosition()).getPhoneNum());
-
+        public void bind(RealmContact realmContact) {
+            con_name.setText(getData().get(getAdapterPosition()).getName());
+            con_surname.setText(getData().get(getAdapterPosition()).getSurname());
+            con_phonenum.setText(getData().get(getAdapterPosition()).getPhoneNum());
+            con_gender.setText(getData().get(getAdapterPosition()).getGender());
             try {
-                con_bdate.setText(MyCont.get(getAdapterPosition()).getBdate().getDate() + " / " + MyCont.get(getAdapterPosition()).getBdate().getMonth() + " / " + MyCont.get(getAdapterPosition()).getBdate().getYear());
+                con_bdate.setText(getData().get(getAdapterPosition()).getBdate().getDate() + " / " + getData().get(getAdapterPosition()).getBdate().getMonth() + " / " + getData().get(getAdapterPosition()).getBdate().getYear());
             } catch (NullPointerException ie) {
-                con_bdate.setText("");
+                con_bdate.setText("No date");
             }
 
-            con_gender.setText(MyCont.get(getAdapterPosition()).getGender());
 
         }
 

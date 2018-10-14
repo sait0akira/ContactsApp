@@ -1,11 +1,13 @@
 package akira.contacts;
 
+
 import java.util.Date;
+
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 import io.realm.annotations.Required;
 
-public class Realm_contact extends RealmObject {
+public class RealmContact extends RealmObject {
 
 
     private String name;
@@ -37,11 +39,7 @@ public class Realm_contact extends RealmObject {
         return phoneNum;
     }
 
-    public void setPhoneNum(final String phoneNum) {
-        this.phoneNum = phoneNum;
-    }
 
-    //@Nullable
     private Date bdate;
 
     public Date getBdate() {
@@ -52,7 +50,7 @@ public class Realm_contact extends RealmObject {
         this.bdate = bdate;
     }
 
-    //@Nullable
+
     private String gender;
 
     public String getGender() {
@@ -62,4 +60,6 @@ public class Realm_contact extends RealmObject {
     public void setGender(final String gender) {
         this.gender = gender;
     }
+
+
 }
